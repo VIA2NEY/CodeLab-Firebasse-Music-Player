@@ -17,4 +17,4 @@ samples, guidance on mobile development, and a full API reference.
 
 ## Visitors count
 
-<img align = "left" src "https//profile-counter.glitch.me/CodeLab-Firebasse-Music-Player/count.svg" alt="Loading">
+![Visitor Count]("https//profile-counter.glitch.me/VIA2NEY/CodeLab-Firebasse-Music-Player/count.svg")

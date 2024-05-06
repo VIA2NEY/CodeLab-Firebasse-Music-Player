@@ -54,6 +54,7 @@ class DefaultFirebaseOptions {
     projectId: projectIdWeb,
     authDomain: authDomainWeb,
     storageBucket: storageBucketWeb,
+    databaseURL: databaseURLWeb,
   );
 
   static const FirebaseOptions android = FirebaseOptions(
