@@ -1,0 +1,45 @@
+CREER UN PROJET FIREBASE 
+Ouvrez un navigateur sur http://console.firebase.google.com/ .
+
+Connectez-vous à Firebase .
+Dans la console Firebase, cliquez sur Ajouter un projet (ou Créer un projet ) et nommez votre projet
+
+
+CONFIGURATION ET INITIALISATION
+Pour configurer un projet firebase d'abord faite flutterfire configure dans la console
+
+ou si vous n'etes pas connecter par defaut faite firebase login et connecter vous. 
+
+Ensuite faite À l'invite, choisissez le projet que vous venez de créer
+
+Sélectionnez iOS , Android et Web lorsque vous êtes invité à choisir la prise en charge de la configuration
+
+Une fois configuré, un fichier firebase_options.dart sera généré pour vous, contenant toutes les options requises pour l'initialisation
+
+
+Pour ma part dans ce projet au lieu de mettre dans le gitignore le fichier générer après le succès de la configuration de firebase dans le projet (le fichier firebase_options), je l'ai gardé pour que vous ayez un aperçu de comment est-ce qu'il peut se présenter et j'ai créé un autre fichier firebase_keys.dart dans lequel j'enregistre mes clés pour mon projet. Et dans mon fichier, on a :
+
+const String apiKeyWeb= 'Valeur generer dans le fichier firebase_option.dart';
+const String appIdWeb= 'Valeur generer dans le fichier firebase_option.dart';
+const String messagingSenderIdWeb= 'Valeur generer dans le fichier firebase_option.dart';
+const String projectIdWeb= 'Valeur generer dans le fichier firebase_option.dart';
+const String authDomainWeb= 'Valeur generer dans le fichier firebase_option.dart';
+const String storageBucketWeb= 'Valeur generer dans le fichier firebase_option.dart';
+
+
+
+const String apiKeyAndroid= 'Valeur generer dans le fichier firebase_option.dart';
+const String appIdAndroid= 'Valeur generer dans le fichier firebase_option.dart';
+const String messagingSenderIdAndroid= 'Valeur generer dans le fichier firebase_option.dart';
+const String projectIdAndroid= 'Valeur generer dans le fichier firebase_option.dart';
+const String storageBucketAndroid= 'Valeur generer dans le fichier firebase_option.dart';
+
+
+
+const String apiKeyIos= 'Valeur generer dans le fichier firebase_option.dart';
+const String appIdIos= 'Valeur generer dans le fichier firebase_option.dart';
+const String messagingSenderIdIos= 'Valeur generer dans le fichier firebase_option.dart';
+const String projectIdIos= 'Valeur generer dans le fichier firebase_option.dart';
+const String storageBucketIos= 'Valeur generer dans le fichier firebase_option.dart';
+const String iosBundleIdIos= 'Valeur generer dans le fichier firebase_option.dart';
+
