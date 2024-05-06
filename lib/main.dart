@@ -1,10 +1,23 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:music_player/firebase_options.dart';
+import 'package:music_player/src/application_state.dart';
 import 'package:music_player/src/player_widget.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:music_player/src/widgets.dart';
+import 'package:provider/provider.dart';
 
-void main() {
-  runApp(const MyMusicBoxApp());
+void main() async {
+ WidgetsFlutterBinding.ensureInitialized();
+ await Firebase.initializeApp(
+   options: DefaultFirebaseOptions.currentPlatform,
+ );
+
+ runApp(ChangeNotifierProvider(
+    create: (context) => ApplicationState(),
+    builder: (context, _) => const MyMusicBoxApp(),
+  ));
 }
 
 class MyMusicBoxApp extends StatelessWidget {
@@ -58,6 +71,9 @@ class _PlayerPageState extends State<PlayerPage> {
       appBar: AppBar(
         title: const Text('Music Box'),
         backgroundColor: Colors.deepPurple.shade400,
+        actions: const <Widget>[
+          AppBarMenuButton(),
+        ],
       ),
       body: Container(
         padding: const EdgeInsets.all(16.0),

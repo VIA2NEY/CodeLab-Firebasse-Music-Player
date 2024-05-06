@@ -52,6 +52,9 @@ android {
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
+
+        // J'ai ajouté cette ligne je ne comprenais pas pourquoi est que Firebase passait pas sur le phone maintenantsa passe
+        // multiDexEnabled true
     }
 
     buildTypes {

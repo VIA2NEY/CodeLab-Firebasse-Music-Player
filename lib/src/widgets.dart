@@ -13,6 +13,9 @@
 // limitations under the License.
 
 import 'package:flutter/material.dart';
+import 'package:music_player/src/application_state.dart';
+import 'package:music_player/src/authentication.dart';
+import 'package:provider/provider.dart';
 
 class Header extends StatelessWidget {
   const Header(this.heading, {Key? key}) : super(key: key);
@@ -41,4 +44,114 @@ class StyledButton extends StatelessWidget {
         onPressed: onPressed,
         child: child,
       );
+}
+
+
+class AppBarMenuButton extends StatelessWidget {
+  const AppBarMenuButton({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ApplicationState>(
+      builder: (context, appState, child) {
+        if (appState.loginState == ApplicationLoginState.loggedIn) {
+          return SignedInMenuButton(buildContext: context);
+        }
+        return SignInMenuButton(buildContext: context);
+      },
+    );
+  }
+}
+
+class SignedInMenuButton extends StatelessWidget {
+  const SignedInMenuButton({Key? key, required this.buildContext})
+      : super(key: key);
+  final BuildContext buildContext;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      onSelected: _handleSignedInMenu,
+      color: Colors.deepPurple.shade300,
+      itemBuilder: (context) => _getMenuItemBuilder(),
+    );
+  }
+
+  List<PopupMenuEntry<String>> _getMenuItemBuilder() {
+    return [
+      const PopupMenuItem<String>(
+        value: 'Sign out',
+        child: Text(
+          'Sign out',
+          style: TextStyle(color: Colors.white),
+        ),
+      )
+    ];
+  }
+
+  Future<void> _handleSignedInMenu(String value) async {
+    switch (value) {
+      case 'Sign out':
+        Provider.of<ApplicationState>(buildContext, listen: false).signOut();
+        break;
+    }
+  }
+}
+
+class SignInMenuButton extends StatelessWidget {
+  const SignInMenuButton({Key? key, required this.buildContext})
+      : super(key: key);
+  final BuildContext buildContext;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      onSelected: _signIn,
+      color: Colors.deepPurple.shade300,
+      itemBuilder: (context) => _getMenuItemBuilder(context),
+    );
+  }
+
+  Future<void> _signIn(String value) async {
+    return showDialog<void>(
+      context: buildContext,
+      builder: (context) => const SignInDialog(),
+    );
+  }
+
+  List<PopupMenuEntry<String>> _getMenuItemBuilder(BuildContext context) {
+    return [
+      const PopupMenuItem<String>(
+        value: 'Sign in',
+        child: Text(
+          'Sign in',
+          style: TextStyle(color: Colors.white),
+        ),
+      ),
+    ];
+  }
+}
+
+class SignInDialog extends AlertDialog {
+  const SignInDialog({Key? key}) : super(key: key);
+
+  @override
+  AlertDialog build(BuildContext context) {
+    return AlertDialog(
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        Consumer<ApplicationState>(
+          builder: (context, appState, _) => Authentication(
+            email: appState.email,
+            loginState: appState.loginState,
+            startLoginFlow: appState.startLoginFlow,
+            verifyEmail: appState.verifyEmail,
+            signInWithEmailAndPassword: appState.signInWithEmailAndPassword,
+            cancelRegistration: appState.cancelRegistration,
+            registerAccount: appState.registerAccount,
+            signOut: appState.signOut,
+          ),
+        ),
+      ]),
+    );
+  }
 }
