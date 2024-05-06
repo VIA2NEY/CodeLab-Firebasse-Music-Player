@@ -1,18 +1,4 @@
-// Copyright 2022 Google LLC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-// Adapted from https://github.com/bluefireteam/audioplayers/blob/master/packages/audioplayers/example/lib/player_widget.dart
+// // Copyright 2022 Google LLC
 
 import 'dart:async';
 import 'dart:math';
@@ -29,7 +15,7 @@ class PlayerWidget extends StatefulWidget {
   const PlayerWidget({
     Key? key,
     required this.url,
-    this.mode = PlayerMode.MEDIA_PLAYER,
+    this.mode = PlayerMode.mediaPlayer,
     required this.context,
   }) : super(key: key);
 
@@ -43,22 +29,17 @@ class _PlayerWidgetState extends State<PlayerWidget> {
   static const skipIntervalInSec = 15;
 
   late AudioPlayer _audioPlayer;
-  late AudioCache _audioCache;
 
   Duration _duration = const Duration();
   Duration _position = const Duration();
 
-  PlayerState _playerState = PlayerState.STOPPED;
-  StreamSubscription? _durationSubscription;
-  StreamSubscription? _positionSubscription;
-  StreamSubscription? _playerCompleteSubscription;
-  StreamSubscription? _playerErrorSubscription;
-  StreamSubscription? _playerStateSubscription;
+  PlayerState _playerState = PlayerState.stopped;
+  late StreamSubscription<Duration> _durationSubscription;
+  late StreamSubscription<Duration> _positionSubscription;
+  late StreamSubscription<PlayerState> _playerStateSubscription;
 
   String get _durationText => _durationToString(_duration);
   String get _positionText => _durationToString(_position);
-
-  _PlayerWidgetState();
 
   late Slider _slider;
   double _sliderPosition = 0.0;
@@ -72,11 +53,9 @@ class _PlayerWidgetState extends State<PlayerWidget> {
   @override
   void dispose() {
     _audioPlayer.dispose();
-    _durationSubscription?.cancel();
-    _positionSubscription?.cancel();
-    _playerCompleteSubscription?.cancel();
-    _playerErrorSubscription?.cancel();
-    _playerStateSubscription?.cancel();
+    _durationSubscription.cancel();
+    _positionSubscription.cancel();
+    _playerStateSubscription.cancel();
 
     super.dispose();
   }
@@ -111,7 +90,7 @@ class _PlayerWidgetState extends State<PlayerWidget> {
                   _duration.inSeconds == 0
                       ? getLocalFileDuration()
                       : Text(_durationText,
-                          style: const TextStyle(fontSize: 18.0))
+                        style: const TextStyle(fontSize: 18.0))
                 ],
               ),
               Row(
@@ -127,9 +106,9 @@ class _PlayerWidgetState extends State<PlayerWidget> {
                   IconButton(
                     key: const Key('play_button'),
                     onPressed:
-                        _playerState == PlayerState.PLAYING ? _pause : _play,
+                    _playerState == PlayerState.playing ? _pause : _play,
                     iconSize: 48.0,
-                    icon: _playerState == PlayerState.PLAYING
+                    icon: _playerState == PlayerState.playing
                         ? const Icon(Icons.pause)
                         : const Icon(Icons.play_arrow),
                     color: Colors.purple.shade400,
@@ -164,7 +143,7 @@ class _PlayerWidgetState extends State<PlayerWidget> {
 
     // Avoid a bug in web where position is set to zero on pause.
     // Has to happen after playback position is set.
-    if (kIsWeb && _playerState == PlayerState.PAUSED) {
+    if (kIsWeb && _playerState == PlayerState.paused) {
       _audioPlayer.pause();
     }
   }
@@ -175,24 +154,13 @@ class _PlayerWidgetState extends State<PlayerWidget> {
     _seek(_position);
   }
 
-  Future<int> _getDuration() async {
-    if (kIsWeb) {
-      await _audioPlayer.setUrl(widget.url);
-      return Future.delayed(
-        const Duration(milliseconds: 300),
-        () => _audioPlayer.getDuration(),
-      );
-    } else {
-      await _audioCache
-          .load(widget.url)
-          .then((uri) => _audioPlayer.setUrl(uri.toString()));
-      return Future.delayed(
-          const Duration(milliseconds: 300), () => _audioPlayer.getDuration());
-    }
+  Future<Future<Duration?>> _getDuration() async {
+    await _audioPlayer.setSourceUrl(widget.url);
+    return _audioPlayer.getDuration();
   }
 
-  FutureBuilder<int> getLocalFileDuration() {
-    return FutureBuilder<int>(
+  FutureBuilder/*<int>*/ getLocalFileDuration() {
+    return FutureBuilder/*<int>*/(
       future: _getDuration(),
       initialData: 0,
       builder: (context, snapshot) {
@@ -217,106 +185,48 @@ class _PlayerWidgetState extends State<PlayerWidget> {
     );
   }
 
-  Future<void> _initAudioPlayer() async {
-    _audioPlayer = AudioPlayer(mode: widget.mode);
+  void _initAudioPlayer() {
+    _audioPlayer = AudioPlayer();
     _audioPlayer.setVolume(0.005);
-    if (kIsWeb) {
-      // Web only. Avoid recreating player.
-      _audioPlayer.setReleaseMode(ReleaseMode.LOOP);
-    }
 
-    _audioCache = AudioCache(fixedPlayer: _audioPlayer);
+    _durationSubscription =
+        _audioPlayer.onDurationChanged.listen((duration) {
+          setState(() => _duration = duration);
+        });
 
-    _durationSubscription = _audioPlayer.onDurationChanged.listen((duration) {
-      setState(() => _duration = duration);
-    });
-
-    _positionSubscription = _audioPlayer.onAudioPositionChanged.listen((p) {
-      if (kIsWeb) {
-        if (p.inMilliseconds == 0 ||
-            p.inMilliseconds >= _duration.inMilliseconds) {
-          return;
-        }
-      }
-      setState(() {
-        _position = p;
-        _setSliderWithPlaybackPosition();
-      });
-    });
-
-    _playerCompleteSubscription =
-        _audioPlayer.onPlayerCompletion.listen((event) {
-      _stop();
-    });
+    _positionSubscription =
+        _audioPlayer.onPositionChanged.listen((p) {
+          setState(() {
+            _position = p;
+            _setSliderWithPlaybackPosition();
+          });
+        });
 
     _playerStateSubscription =
         _audioPlayer.onPlayerStateChanged.listen((state) {
-      setState(() => _playerState = state);
-    });
-
-    _playerErrorSubscription = _audioPlayer.onPlayerError.listen((msg) {
-      setState(() {
-        _playerState = PlayerState.STOPPED;
-        _position = const Duration();
-      });
-    });
-
-    _audioPlayer.onPlayerStateChanged.listen((state) {
-      if (mounted) {
-        setState(() {
-          _playerState = state;
+          setState(() => _playerState = state);
         });
-      }
-    });
-
-    _audioPlayer.onNotificationPlayerStateChanged.listen((state) {
-      if (mounted) {
-        setState(() => _playerState = state);
-      }
-    });
   }
 
   Future<int> _play() async {
-    var result = 0;
-
-    if (_playerState == PlayerState.PAUSED) {
-      result = await _audioPlayer.resume();
-      return result;
-    }
-    if (kIsWeb) {
-      // Web does not have audioCache
-      result = await _audioPlayer.play(widget.url, position: _position);
-      if (result == 1) {
-        setState(() => _playerState = PlayerState.PLAYING);
-      }
-    } else {
-      _audioCache.play(widget.url);
-      _playerState = PlayerState.PLAYING;
-    }
-
-    return result;
+    await _audioPlayer.play(widget.url as Source);
+    return 1;
   }
 
   Future<int> _pause() async {
-    final result = await _audioPlayer.pause();
-    if (result == 1) {
-      setState(() => {_playerState = PlayerState.PAUSED});
-    }
-    return result;
+    await _audioPlayer.pause();
+    return 1;
   }
 
   Future<int> _seek(Duration _tempPosition) async {
-    final result = await _audioPlayer.seek(_tempPosition);
-    if (result == 1) {
-      setState(() => _position = _tempPosition);
-    }
-    return result;
+    await _audioPlayer.seek(_tempPosition);
+    return 1;
   }
 
   Future<int> _forward() async {
     return _updatePositionAndSlider(Duration(
         seconds:
-            min(_duration.inSeconds, _position.inSeconds + skipIntervalInSec)));
+        min(_duration.inSeconds, _position.inSeconds + skipIntervalInSec)));
   }
 
   Future<int> _rewind() async {
@@ -325,14 +235,8 @@ class _PlayerWidgetState extends State<PlayerWidget> {
   }
 
   Future<int> _updatePositionAndSlider(Duration tempPosition) async {
-    final result = await _audioPlayer.seek(tempPosition);
-    if (result == 1) {
-      setState(() {
-        _position = tempPosition;
-        _setSliderWithPlaybackPosition();
-      });
-    }
-    return result;
+    await _audioPlayer.seek(tempPosition);
+    return 1;
   }
 
   void _setSliderWithPlaybackPosition() {
@@ -340,19 +244,6 @@ class _PlayerWidgetState extends State<PlayerWidget> {
     _sliderPosition = position.isNaN ? 0 : position;
   }
 
-  Future<int> _stop() async {
-    final result = await _audioPlayer.stop();
-    if (result == 1) {
-      setState(() {
-        _playerState = PlayerState.STOPPED;
-        _position = const Duration();
-        _setSliderWithPlaybackPosition();
-      });
-    }
-    return result;
-  }
-
-  // Convert duration to [HH:]mm:ss format
   String _durationToString(Duration? duration) {
     String twoDigits(int? n) => n.toString().padLeft(2, '0');
     String twoDigitMinutes = twoDigits(duration?.inMinutes.remainder(60));
