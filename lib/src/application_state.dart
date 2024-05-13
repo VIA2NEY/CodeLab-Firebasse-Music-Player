@@ -9,6 +9,11 @@ import 'package:flutter/material.dart';
 import 'package:music_player/firebase_options.dart';
 import 'package:music_player/src/authentication.dart';
 
+
+// Interface to be implemented by PlayerWidget
+typedef OnLeadDeviceChangeCallback = void Function(
+    Map<dynamic, dynamic> snapshot);
+
 class ApplicationState extends ChangeNotifier {
   ApplicationState() {
     init();
@@ -26,7 +31,7 @@ class ApplicationState extends ChangeNotifier {
       if (user != null) {
         _loginState = ApplicationLoginState.loggedIn;
         _uid = user.uid;
-        _addUserDevice();
+        _addUserDevice().then((_) => listenToLeadDeviceChange());
       } else {
         _loginState = ApplicationLoginState.loggedOut;
       }
@@ -39,6 +44,10 @@ class ApplicationState extends ChangeNotifier {
 
   String? _email;
   String? get email => _email;
+  bool _isLeadDevice = false;
+  String? leadDeviceType;
+
+  OnLeadDeviceChangeCallback? onLeadDeviceChangeCallback;
 
   void startLoginFlow() {
     _loginState = ApplicationLoginState.emailAddress;
@@ -158,4 +167,51 @@ class ApplicationState extends ChangeNotifier {
   }
   
   
+  Future<void> setLeadDevice() async {
+    if (_uid != null && _deviceId != null) {
+      var playerRef =
+          FirebaseDatabase.instance.ref().child('/users/$_uid/active_device');
+      await playerRef
+          .update({'id': _deviceId, 'type': _getDevicePlatform()}).then((_) {
+        _isLeadDevice = true;
+      });
+    }
+  }
+
+  Future<void> setLeadDeviceState(
+      int playerState, double sliderPosition) async {
+    if (_isLeadDevice && _uid != null && _deviceId != null) {
+      var leadDeviceStateRef =
+          FirebaseDatabase.instance.ref().child('/users/$_uid/active_device');
+      try {
+        var playerSnapshot = {
+          'id': _deviceId,
+          'state': playerState,
+          'type': _getDevicePlatform(),
+          'slider_position': sliderPosition
+        };
+        await leadDeviceStateRef.set(playerSnapshot);
+      } catch (e) {
+        throw Exception('updated playerState with error');
+      }
+    }
+  }
+
+  Future<void> listenToLeadDeviceChange() async {
+    if (_uid != null) {
+      var activeDeviceRef =
+          FirebaseDatabase.instance.ref().child('/users/$_uid/active_device');
+      activeDeviceRef.onValue.listen((event) {
+        final activeDeviceState = event.snapshot.value as Map<dynamic, dynamic>;
+        String activeDeviceKey = activeDeviceState['id'] as String;
+        _isLeadDevice = _deviceId == activeDeviceKey;
+        leadDeviceType = activeDeviceState['type'] as String;
+        if (!_isLeadDevice) {
+          onLeadDeviceChangeCallback?.call(activeDeviceState);
+        }
+        notifyListeners();
+      });
+    }
+  }
+
 }

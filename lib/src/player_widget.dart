@@ -6,6 +6,8 @@ import 'dart:math';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:music_player/src/application_state.dart';
+import 'package:provider/provider.dart';
 
 class PlayerWidget extends StatefulWidget {
   final String url;
@@ -48,6 +50,44 @@ class _PlayerWidgetState extends State<PlayerWidget> {
   void initState() {
     super.initState();
     _initAudioPlayer();
+
+    Provider.of<ApplicationState>(context, listen: false)
+        .onLeadDeviceChangeCallback = updatePlayer;
+  }
+
+
+  void updatePlayer(Map<dynamic, dynamic> snapshot) {
+    _updatePlayer(snapshot['state'], snapshot['slider_position']);
+  }
+
+  void _updatePlayer(dynamic state, dynamic sliderPosition) {
+    if (state is int && sliderPosition is double) {
+      try {
+        _updateSlider(sliderPosition);
+        final PlayerState newState = PlayerState.values[state];
+        if (newState != _playerState) {
+          switch (newState) {
+            case PlayerState.playing:
+              _play();
+              break;
+            case PlayerState.paused:
+              _pause();
+              break;
+            case PlayerState.stopped:
+            case PlayerState.completed:
+              _stop();
+              break;
+            case PlayerState.disposed:
+              // TODO: Handle this case.
+          }
+          _playerState = newState;
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('sync player failed');
+        }
+      }
+    }
   }
 
   @override
@@ -135,6 +175,10 @@ class _PlayerWidgetState extends State<PlayerWidget> {
       return;
     }
     _updateSlider(v);
+
+    Provider.of<ApplicationState>(context, listen: false)
+        .setLeadDeviceState(_playerState.index, _sliderPosition);
+  
   }
 
   void _updateSlider(double v) {
@@ -215,7 +259,16 @@ class _PlayerWidgetState extends State<PlayerWidget> {
 
   Future<int> _pause() async {
     await _audioPlayer.pause();
+    Provider.of<ApplicationState>(context, listen: false)
+        .setLeadDeviceState(_playerState.index, _sliderPosition);
+    // return 1;
+    if (_playerState == PlayerState.paused) {
+      // Reprise du lecteur audio si l'état est en pause
+      await _audioPlayer.resume();
+    }
+
     return 1;
+
   }
 
   Future<int> _seek(Duration _tempPosition) async {
@@ -236,12 +289,26 @@ class _PlayerWidgetState extends State<PlayerWidget> {
 
   Future<int> _updatePositionAndSlider(Duration tempPosition) async {
     await _audioPlayer.seek(tempPosition);
+    
+    Provider.of<ApplicationState>(context, listen: false)
+        .setLeadDeviceState(_playerState.index, _sliderPosition);
+
     return 1;
   }
 
   void _setSliderWithPlaybackPosition() {
     final position = _position.inSeconds / _duration.inSeconds;
     _sliderPosition = position.isNaN ? 0 : position;
+  }
+
+  Future<int> _stop() async {
+    await _audioPlayer.stop();
+      setState(() {
+        _playerState = PlayerState.stopped;
+        _position = const Duration();
+        _setSliderWithPlaybackPosition();
+      });
+    return 1 ;
   }
 
   String _durationToString(Duration? duration) {

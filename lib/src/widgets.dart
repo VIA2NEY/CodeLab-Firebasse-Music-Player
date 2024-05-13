@@ -85,7 +85,16 @@ class SignedInMenuButton extends StatelessWidget {
           'Sign out',
           style: TextStyle(color: Colors.white),
         ),
+      ),
+
+      const PopupMenuItem<String>(
+        value: 'Controller',
+        child: Text(
+          'Set as controller',
+          style: TextStyle(color: Colors.white),
+        ),
       )
+
     ];
   }
 
@@ -94,6 +103,10 @@ class SignedInMenuButton extends StatelessWidget {
       case 'Sign out':
         Provider.of<ApplicationState>(buildContext, listen: false).signOut();
         break;
+
+      case 'Controller':
+        Provider.of<ApplicationState>(buildContext, listen: false)
+            .setLeadDevice();
     }
   }
 }
